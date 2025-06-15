@@ -11,10 +11,26 @@ def menu():
     Antes de qualquer operação, garante que a chave esteja disponível.
     """
     # Tenta carregar ou gerar a chave de criptografia
-    key = ensure_key_file()
-    if not key:
-        print("Não foi possível carregar ou gerar a chave. Verifique o arquivo.")
-        return  # Encerra caso não consiga obter uma chave válida
+    key = None
+    user_key = None
+    while True:
+        user_key = input("Forneça uma chave (8 dígitos hex, vazio para gerar): ").strip()
+        if user_key == "":
+            # Usuário quer gerar/usar chave automática
+            key = ensure_key_file()
+            if key is not None:
+                break
+            else:
+                print("Erro ao gerar ou carregar chave automática. Tente novamente.")
+        else:
+            key = ensure_key_file(user_key)
+            if key is not None:
+                break
+            else:
+                print("Chave inválida. Tente novamente.")
+        if not key:
+            print("Não foi possível carregar ou gerar a chave. Verifique o arquivo.")
+            return  # Encerra caso não consiga obter uma chave válida
 
     # Loop principal do menu
     while True:

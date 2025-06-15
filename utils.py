@@ -13,17 +13,45 @@ KEY_FILE = os.path.join(BASE_DIR, "key.txt")
 os.makedirs(BASE_DIR, exist_ok=True)
 
 
-def ensure_key_file() -> str:
+import os
+import secrets
+
+BASE_DIR = 'files'  # ajuste conforme seu contexto
+KEY_FILE = os.path.join('files/key.txt')
+
+def ensure_key_file(provided_key: str = None) -> str | None:
     """
-    Garante que o arquivo de chave em 'files/key.txt' exista. Se não existir,
-    gera uma chave aleatória de 32 bits, grava em hex de 8 dígitos no arquivo e retorna a chave.
-    Caso exista, apenas carrega e valida o conteúdo.
+    Garante que o arquivo de chave em 'files/key.txt' exista.
+    Se `provided_key` for fornecida, valida e grava esta chave no arquivo, substituindo o conteúdo.
+    Se não for fornecida, gera uma chave aleatória se o arquivo não existir,
+    ou lê e valida o arquivo existente.
+    Retorna a chave em formato hexadecimal (8 dígitos maiúsculos) ou None em caso de erro.
     """
-    # Trabalha sempre com KEY_FILE dentro de BASE_DIR
+    def is_valid_key(k: str) -> bool:
+        return len(k) == 8 and all(c in "0123456789ABCDEF" for c in k.upper())
+    
+    if provided_key is not None:
+        key_hex = provided_key.strip().upper()
+        if not is_valid_key(key_hex):
+            print(f"Chave fornecida inválida: '{provided_key}'. Deve ter 8 dígitos hexadecimais.")
+            return None
+        # grava a chave fornecida no arquivo (sobrescreve se existir)
+        try:
+            os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
+            with open(KEY_FILE, 'w') as f:
+                f.write(key_hex)
+            print(f"Chave fornecida gravada em '{KEY_FILE}'.")
+            return key_hex
+        except Exception as e:
+            print(f"Erro ao gravar arquivo de chave: {e}")
+            return None
+
+    # Se não passou chave, garante que o arquivo exista
     if not os.path.exists(KEY_FILE):
         key_int = secrets.randbits(32)
         key_hex = f"{key_int:08X}"
         try:
+            os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
             with open(KEY_FILE, 'w') as f:
                 f.write(key_hex)
             print(f"Arquivo de chave não encontrado. Nova chave gerada em '{KEY_FILE}'.")
@@ -33,14 +61,17 @@ def ensure_key_file() -> str:
     else:
         try:
             with open(KEY_FILE, 'r') as f:
-                key_hex = f.read().strip()
+                key_hex = f.read().strip().upper()
         except Exception as e:
             print(f"Erro ao ler arquivo de chave: {e}")
             return None
-    if len(key_hex) != 8 or any(c not in "0123456789ABCDEF" for c in key_hex.upper()):
+
+    if not is_valid_key(key_hex):
         print(f"Chave em formato inválido no arquivo '{KEY_FILE}'.")
         return None
+
     return key_hex
+
 
 def list_local_archives(return_list=False) -> list[str] | None:
     """
