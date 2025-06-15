@@ -1,3 +1,4 @@
+# main.py
 from utils import show_file, list_local_archives, ensure_key_file
 from encrypt_file import encrypt_menu
 from decrypt_file import decrypt_menu
