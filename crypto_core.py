@@ -1,3 +1,5 @@
+import sys
+sys.dont_write_bytecode = True
 import struct
 
 # Tamanho do bloco em bytes (4 bytes = 32 bits)

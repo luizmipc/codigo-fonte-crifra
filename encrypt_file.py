@@ -1,6 +1,7 @@
 # encrypt.py
 import os
 import sys
+sys.dont_write_bytecode = True
 from crypto_core import BLOCK_SIZE, generate_subkeys, encrypt_block as _enc_block
 from utils import list_local_archives
 

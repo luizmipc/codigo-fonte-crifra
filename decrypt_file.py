@@ -1,6 +1,7 @@
 # decrypt.py
 import os
 import sys
+sys.dont_write_bytecode = True
 from crypto_core import BLOCK_SIZE, generate_subkeys, decrypt_block as _dec_block
 from utils import list_local_archives
 
