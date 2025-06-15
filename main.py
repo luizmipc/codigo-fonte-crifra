@@ -2,7 +2,6 @@
 import sys
 sys.dont_write_bytecode = True
 from utils import show_file, list_local_archives, ensure_key_file
-from avalanche import demonstrate_avalanche_effect
 from encrypt_file import encrypt_menu
 from decrypt_file import decrypt_menu
 
@@ -24,7 +23,6 @@ def menu():
         print("2) Decriptar arquivo")
         print("3) Mostrar conteúdo de arquivo")
         print("4) Listar arquivos locais")
-        print("5) Demonstrar efeito avalanche")
         print("0) Sair")
         escolha = input("Escolha uma opção: ").strip()  # Lê e remove espaços extras
 

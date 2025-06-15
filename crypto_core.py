@@ -16,7 +16,7 @@ SBOX = [0xE, 0x4, 0xD, 0x1,
 # Inverso da S-Box (para decriptação)
 SBOX_INV = [0]*16
 for i, v in enumerate(SBOX):
-    SBOX_INV[v] = i  # Calcula a inversa de cada entrada da SBOX
+    SBOX_INV[v] = i
 
 # Tabela de permutação de bits (P-Box) para 32 bits
 PBOX = [16, 25, 12, 11,
@@ -37,7 +37,6 @@ for src, dst in enumerate(PBOX):
 def generate_subkeys(master_key: int) -> list[int]:
     """
     Gera uma lista de subchaves a partir da chave mestra.
-    Realiza um shift rotacional e uma operação XOR com uma constante para cada rodada.
     """
     sub = []
     for i in range(N_ROUNDS):
@@ -48,20 +47,14 @@ def generate_subkeys(master_key: int) -> list[int]:
 
 
 def substitute(word: int) -> int:
-    """
-    Aplica substituição S-Box em cada nibble (4 bits) do valor de 32 bits.
-    """
     out = 0
-    for i in range(8):  # 32 bits = 8 nibbles de 4 bits
+    for i in range(8):
         nib = (word >> (4 * i)) & 0xF
         out |= (SBOX[nib] << (4 * i))
     return out
 
 
 def substitute_inv(word: int) -> int:
-    """
-    Aplica substituição inversa (SBOX_INV) para decriptação.
-    """
     out = 0
     for i in range(8):
         nib = (word >> (4 * i)) & 0xF
@@ -70,10 +63,6 @@ def substitute_inv(word: int) -> int:
 
 
 def permute(word: int) -> int:
-    """
-    Aplica a permutação de bits (P-Box).
-    Cada bit da entrada é movido para a posição indicada na tabela PBOX.
-    """
     out = 0
     for src, dst in enumerate(PBOX):
         out |= (((word >> src) & 1) << dst)
@@ -81,69 +70,59 @@ def permute(word: int) -> int:
 
 
 def permute_inv(word: int) -> int:
-    """
-    Aplica a permutação inversa de bits (PBOX_INV).
-    Restaura a ordem original dos bits.
-    """
     out = 0
     for dst, src in enumerate(PBOX_INV):
         out |= (((word >> dst) & 1) << src)
     return out
 
 
-def encrypt_block(block: bytes, subkeys: list[int]) -> bytes:
+def encrypt_block(block: bytes, subkeys: list[int], verbose: bool = True) -> bytes:
     """
     Encripta um bloco de 4 bytes usando as subchaves fornecidas.
-    Exibe o estado parcial após cada sub-etapa para demonstração do efeito avalanche.
+    Com verbose=True (padrão), mostra o estado parcial após cada sub-etapa para demonstração.
     """
     if len(block) < BLOCK_SIZE:
         block = block.ljust(BLOCK_SIZE, b'\0')
 
     w, = struct.unpack('>I', block)
-    print(f"\n[ENCRYPT] Entrada: {w:032b}")
+    print(f"\n[ENCRYPT] Entrada : {w:032b}")
 
     for i, sk in enumerate(subkeys):
-        # Substituição
         before = w
         w = substitute(w)
-        print(f"Round {i+1} Sub:    {before:032b} -> {w:032b}")
-        # Permutação
+        print(f"Round {i+1} Sub   : {before:032b} -> {w:032b}")
         before = w
         w = permute(w)
-        print(f"Round {i+1} Perm:   {before:032b} -> {w:032b}")
-        # XOR com subchave
+        print(f"Round {i+1} Perm  : {before:032b} -> {w:032b}")
         before = w
         w ^= sk
-        print(f"Round {i+1} XOR:    {before:032b} -> {w:032b}  (subkey={sk:08X})")
+        print(f"Round {i+1} XOR   : {before:032b} -> {w:032b}  (subkey={sk:08X})")
 
-    print(f"[ENCRYPT] Saida:    {w:032b}\n")
+    print(f"[ENCRYPT] Saida  : {w:032b}\n")
     return struct.pack('>I', w)
 
 
-def decrypt_block(block: bytes, subkeys: list[int]) -> bytes:
+def decrypt_block(block: bytes, subkeys: list[int], verbose: bool = True) -> bytes:
     """
     Decripta um bloco de 4 bytes usando as subchaves (em ordem reversa).
-    Exibe o estado parcial após cada sub-etapa para demonstração.
+    Com verbose=True (padrão), mostra o estado parcial após cada sub-etapa para demonstração.
     """
     if len(block) < BLOCK_SIZE:
         block = block.ljust(BLOCK_SIZE, b'\0')
 
     w, = struct.unpack('>I', block)
-    print(f"\n[DECRYPT] Entrada: {w:032b}")
+    print(f"\n[DECRYPT] Entrada : {w:032b}")
 
     for i, sk in enumerate(subkeys):
-        # XOR com subchave
         before = w
         w ^= sk
-        print(f"Round {i+1} XOR:    {before:032b} -> {w:032b}  (subkey={sk:08X})")
-        # Permutação inversa
+        print(f"Round {i+1} XOR   : {before:032b} -> {w:032b}  (subkey={sk:08X})")
         before = w
         w = permute_inv(w)
         print(f"Round {i+1} Perm^-1: {before:032b} -> {w:032b}")
-        # Substituição inversa
         before = w
         w = substitute_inv(w)
         print(f"Round {i+1} Sub^-1: {before:032b} -> {w:032b}")
 
-    print(f"[DECRYPT] Saida:    {w:032b}\n")
+    print(f"[DECRYPT] Saida  : {w:032b}\n")
     return struct.pack('>I', w)
