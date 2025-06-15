@@ -33,6 +33,7 @@ PBOX_INV = [0]*32
 for src, dst in enumerate(PBOX):
     PBOX_INV[dst] = src
 
+
 def generate_subkeys(master_key: int) -> list[int]:
     """
     Gera uma lista de subchaves a partir da chave mestra.
@@ -40,13 +41,11 @@ def generate_subkeys(master_key: int) -> list[int]:
     """
     sub = []
     for i in range(N_ROUNDS):
-        # Rotaciona bits da chave para a esquerda
         sk = ((master_key << (i+1)) & 0xFFFFFFFF) | (master_key >> (32 - (i+1)))
-        # Mistura com constante XOR
         sk ^= 0xA5A5A5A5 ^ i
-        # Garante 32 bits com máscara
         sub.append(sk & 0xFFFFFFFF)
     return sub
+
 
 def substitute(word: int) -> int:
     """
@@ -54,9 +53,10 @@ def substitute(word: int) -> int:
     """
     out = 0
     for i in range(8):  # 32 bits = 8 nibbles de 4 bits
-        nib = (word >> (4 * i)) & 0xF  # Extrai nibble
-        out |= (SBOX[nib] << (4 * i))  # Substitui e posiciona no lugar
+        nib = (word >> (4 * i)) & 0xF
+        out |= (SBOX[nib] << (4 * i))
     return out
+
 
 def substitute_inv(word: int) -> int:
     """
@@ -68,6 +68,7 @@ def substitute_inv(word: int) -> int:
         out |= (SBOX_INV[nib] << (4 * i))
     return out
 
+
 def permute(word: int) -> int:
     """
     Aplica a permutação de bits (P-Box).
@@ -77,6 +78,7 @@ def permute(word: int) -> int:
     for src, dst in enumerate(PBOX):
         out |= (((word >> src) & 1) << dst)
     return out
+
 
 def permute_inv(word: int) -> int:
     """
@@ -88,41 +90,60 @@ def permute_inv(word: int) -> int:
         out |= (((word >> dst) & 1) << src)
     return out
 
+
 def encrypt_block(block: bytes, subkeys: list[int]) -> bytes:
     """
     Encripta um bloco de 4 bytes usando as subchaves fornecidas.
-    Operações por rodada: substituição → permutação → XOR com subchave.
+    Exibe o estado parcial após cada sub-etapa para demonstração do efeito avalanche.
     """
-    # Preenche com zeros se o bloco for menor que 4 bytes
     if len(block) < BLOCK_SIZE:
         block = block.ljust(BLOCK_SIZE, b'\0')
 
-    # Converte de bytes para inteiro (big endian)
     w, = struct.unpack('>I', block)
+    print(f"\n[ENCRYPT] Entrada: {w:032b}")
 
-    # Executa N_ROUNDS rodadas de cifra
-    for sk in subkeys:
+    for i, sk in enumerate(subkeys):
+        # Substituição
+        before = w
         w = substitute(w)
+        print(f"Round {i+1} Sub:    {before:032b} -> {w:032b}")
+        # Permutação
+        before = w
         w = permute(w)
-        w ^= sk  # Mistura com subchave
+        print(f"Round {i+1} Perm:   {before:032b} -> {w:032b}")
+        # XOR com subchave
+        before = w
+        w ^= sk
+        print(f"Round {i+1} XOR:    {before:032b} -> {w:032b}  (subkey={sk:08X})")
 
-    # Retorna o inteiro cifrado como bytes (big endian)
+    print(f"[ENCRYPT] Saida:    {w:032b}\n")
     return struct.pack('>I', w)
+
 
 def decrypt_block(block: bytes, subkeys: list[int]) -> bytes:
     """
-    Decripta um bloco de 4 bytes usando as subchaves fornecidas (em ordem reversa).
-    Operações por rodada: XOR com subchave → permutação inversa → substituição inversa.
+    Decripta um bloco de 4 bytes usando as subchaves (em ordem reversa).
+    Exibe o estado parcial após cada sub-etapa para demonstração.
     """
     if len(block) < BLOCK_SIZE:
         block = block.ljust(BLOCK_SIZE, b'\0')
 
     w, = struct.unpack('>I', block)
+    print(f"\n[DECRYPT] Entrada: {w:032b}")
 
-    # Executa as rodadas em ordem inversa
-    for sk in subkeys:
+    for i, sk in enumerate(subkeys):
+        # XOR com subchave
+        before = w
         w ^= sk
+        print(f"Round {i+1} XOR:    {before:032b} -> {w:032b}  (subkey={sk:08X})")
+        # Permutação inversa
+        before = w
         w = permute_inv(w)
+        print(f"Round {i+1} Perm^-1: {before:032b} -> {w:032b}")
+        # Substituição inversa
+        before = w
         w = substitute_inv(w)
+        print(f"Round {i+1} Sub^-1: {before:032b} -> {w:032b}")
 
+    print(f"[DECRYPT] Saida:    {w:032b}\n")
     return struct.pack('>I', w)
