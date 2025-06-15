@@ -9,8 +9,8 @@ BASE_DIR = "files"
 
 def encrypt_file(input_path: str, output_path: str, key_hex: str):
     """
-    Encripta todo o arquivo de input_path em blocos de 32 bits,
-    grava em output_path.
+    Encripta todo o arquivo de input_path em blocos de 32 bits (4 bytes),
+    com padding se necessário. Grava em output_path.
     """
     try:
         key = int(key_hex, 16) & 0xFFFFFFFF
@@ -19,10 +19,18 @@ def encrypt_file(input_path: str, output_path: str, key_hex: str):
         return
 
     subkeys = generate_subkeys(key)
+
     with open(input_path, 'rb') as fin, open(output_path, 'wb') as fout:
-        while chunk := fin.read(BLOCK_SIZE):
+        while True:
+            chunk = fin.read(BLOCK_SIZE)
+            if len(chunk) == 0:
+                break
+            if len(chunk) < BLOCK_SIZE:
+                # Zero padding (simple but works for binary files)
+                chunk += b'\x00' * (BLOCK_SIZE - len(chunk))
             fout.write(_enc_block(chunk, subkeys))
     print(f"Encrypt concluído: {output_path}")
+
 
 
 def encrypt_menu(key_hex: str):

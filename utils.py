@@ -40,22 +40,6 @@ def ensure_key_file() -> str:
         return None
     return key_hex
 
-
-def show_file():
-    """
-    Lê e imprime o conteúdo de qualquer arquivo em 'files/<filename>' como texto UTF-8.
-    """
-    list_local_archives()
-    filename_target = input("\nCaminho do arquivo: ").strip()
-    full_path = os.path.join(BASE_DIR, filename_target)
-    try:
-        with open(full_path, 'rb') as f:
-            data = f.read()
-        print("\n Conteudo:" +  data.decode('utf-8', errors='replace'))
-    except Exception as e:
-        print(f"Erro ao ler arquivo '{full_path}': {e}")
-
-
 def list_local_archives(return_list=False) -> list[str] | None:
     """
     Lista todos os arquivos no diretório 'files/'.
@@ -67,3 +51,35 @@ def list_local_archives(return_list=False) -> list[str] | None:
     print("\n=== LISTA DE ARQUIVOS LOCAIS ===")
     for index, fname in enumerate(files, 1):
         print(f"{index}. {fname}")
+
+
+def show_file():
+    """
+    Lista os arquivos no diretório 'files/', permite a escolha por número e exibe o conteúdo como texto UTF-8.
+    """
+    files = list_local_archives(return_list=True)
+
+    if not files:
+        print("Nenhum arquivo encontrado.")
+        return
+
+    print("\n=== SELECIONE O ARQUIVO PARA EXIBIR ===")
+    for index, fname in enumerate(files, 1):
+        print(f"{index}. {fname}")
+
+    try:
+        choice = int(input("\nDigite o número do arquivo: ").strip())
+        if choice < 1 or choice > len(files):
+            print("Número inválido.")
+            return
+        filename_target = files[choice - 1]
+        full_path = os.path.join(BASE_DIR, filename_target)
+        with open(full_path, 'rb') as f:
+            data = f.read()
+        print("\n=== CONTEÚDO DO ARQUIVO ===")
+        print(data.decode('utf-8', errors='replace'))
+    except ValueError:
+        print("Entrada inválida. Digite um número.")
+    except Exception as e:
+        print(f"Erro ao ler arquivo: {e}")
+
